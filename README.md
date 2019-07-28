@@ -2,6 +2,8 @@
 A Domoticz Python Plugin that can read data from the local inverter webinterface.
 Some people were unable to use the magic-packet solution due to the serial number, others did not want to retrieve data from the webportal.
 
+![devices](https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin/blob/master/plugin_preview.png)
+
 ## ONLY TESTED FOR Raspberry Pi
 
 With Python version 3.5 & Domoticz version V4.1044 Domoticz V4.11034 (beta)
