@@ -126,7 +126,7 @@ class BasePlugin:
         Domoticz.Debug("Received Data: Current Power: "+str(current)+' W')
         Domoticz.Debug("Received Data: Daily Power: "+str(daily/100)+' kWh')
         Domoticz.Debug("Received Data: Total Power: "+str(total/10)+' kWh')
-        sValue=str(current)+";"+str(total*1000)                                 # String: Amount in Watt ; Total generated kWh converted to Wh
+        sValue=str(current)+";"+str(total*100)                                 # String: Amount in Watt ; Total generated kWh converted to Wh
         Domoticz.Debug("Received Data: String for the sensor is: "+sValue+' !')
 
         UpdateDevice(Unit=1, nValue=0, sValue=sValue, TimedOut=0)
