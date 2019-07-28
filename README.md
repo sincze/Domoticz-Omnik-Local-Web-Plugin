@@ -6,7 +6,7 @@ Some people were unable to use the magic-packet solution due to the serial numbe
 
 ## ONLY TESTED FOR Raspberry Pi
 
-With Python version 3.5 & Domoticz version V4.1044 Domoticz V4.11034 (beta)
+With Python version 3.5 & Domoticz V4.11034 (beta)
 
 
 
