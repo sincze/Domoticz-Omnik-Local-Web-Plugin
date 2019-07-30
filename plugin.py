@@ -104,10 +104,12 @@ class BasePlugin:
                                        'User-Agent':'Domoticz/1.0' }
                        }
             Connection.Send(sendData)
-            UpdateDevice(Unit=3, nValue=1, sValue=100, TimedOut=0)      # Inverter device is on
+            UpdateDevice(Unit=3, nValue=1, sValue="On", TimedOut=0)      # Inverter device is on
+
         else:
             Domoticz.Log("Failed to connect ("+str(Status)+") to: "+Parameters["Address"]+":"+Parameters["Mode1"]+" with error: "+Description)
-            UpdateDevice(Unit=3, nValue=0, sValue=0, TimedOut=0)        # Inverter device is off
+            UpdateDevice(Unit=3, nValue=0, sValue="Off", TimedOut=0)        # Inverter device is off
+
 
     def onMessage(self, Connection, Data):
         DumpHTTPResponseToLog(Data)
