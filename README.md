@@ -59,6 +59,6 @@ In the plugin select "webData" as shown in first line or "myDeviceArray" as in s
 ## Acknowledgements
 
 * Special thanks for all the hard work of [Dnpwwo](https://github.com/dnpwwo), for the examples and fixing the HTTP GET error.
-* menno99 and @smartcontrol19 or testing.
+* menno99 and @smartcontrol19 for testing.
 * Domoticz team
 
