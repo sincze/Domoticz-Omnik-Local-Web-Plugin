@@ -31,7 +31,7 @@
 
 
 """
-<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="1.0.0" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
+<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="1.0.1" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
     <description>
         <h2>Retrieve available Information from Local Omnik Inverter Web Page</h2><br/>
     </description>
@@ -43,6 +43,12 @@
             <options>
                 <option label="HTTPS" value="443"/>
                 <option label="HTTP" value="80"  default="true" />
+            </options>
+        </param>
+        <param field="Mode2" label="Inverter" width="75px">
+            <options>
+                <option label="webData" value="1" default="true"/>
+                <option label="myDeviceArray" value="2" />
             </options>
         </param>
         <param field="Mode6" label="Debug" width="150px">
@@ -60,8 +66,17 @@
     </params>
 </plugin>
 """
-import Domoticz
-import re               # Needed to extract data from the webportal result html
+
+try:
+    import Domoticz
+    import re               # Needed to extract data from Some JSON result
+    local = False
+except ImportError:
+    local = True
+    import fakeDomoticz as Domoticz
+    from fakeDomoticz import Devices
+    from fakeDomoticz import Parameters
+
 
 #############################################################################
 #                      Domoticz call back functions                         #
@@ -72,6 +87,7 @@ class BasePlugin:
     runAgain = 6
     disconnectCount = 0
     sProtocol = "HTTP"
+    dataAvailable = False
    
     def __init__(self):
         return
@@ -88,7 +104,7 @@ class BasePlugin:
         Domoticz.Log("Plugin is started.")
         self.httpConn = Domoticz.Connection(Name=self.sProtocol+" Test", Transport="TCP/IP", Protocol=self.sProtocol, Address=Parameters["Address"], Port=Parameters["Mode1"])
         self.httpConn.Connect()
-        
+
     def onStop(self):
         Domoticz.Log("onStop - Plugin is stopping.")
 
@@ -115,47 +131,50 @@ class BasePlugin:
         DumpHTTPResponseToLog(Data)
         
         strData = Data["Data"].decode("utf-8", "ignore")
-
-        strData = re.search(r'(?<=webData=").*?(?=";)', strData).group(0)       # Search for the beginning of the string and the end
-
-        strData = strData.split(",")                                            # Split the result string in a list so we can retrieve data
-        Domoticz.Debug("Received RAW Inverter Data: "+str(strData))             # Maybe error correction later if len(line.split()) == 11 / we expect 11 items
-        
-        current=float(strData[5])                                               # Amount in Watt
-        daily=float(strData[6])                                                 # Amount in kWh of the day
-        total=float(strData[7])                                                 # Total generated kWh needs to be converted to Wh
-        
-        Domoticz.Debug("Received Data: Current Power: "+str(current)+' W')
-        Domoticz.Debug("Received Data: Daily Power: "+str(daily/100)+' kWh')
-        Domoticz.Debug("Received Data: Total Power: "+str(total/10)+' kWh')
-        sValue=str(current)+";"+str(total*100)                                 # String: Amount in Watt ; Total generated kWh converted to Wh
-        Domoticz.Debug("Received Data: String for the sensor is: "+sValue+' !')
-
-        UpdateDevice(Unit=1, nValue=0, sValue=sValue, TimedOut=0)
-        UpdateDevice(Unit=2, nValue=0, sValue=current, TimedOut=0)
        
         Status = int(Data["Status"])
         LogMessage(strData)
 
         if (Status == 200):
-            if ((self.disconnectCount & 1) == 1):
-                Domoticz.Log("Good Response received from Inverter, Disconnecting.")
-                self.httpConn.Disconnect()
+            if (Parameters["Mode2"] == "1"):
+                try: 
+                    strData = re.search(r'(?<=webData=").*?(?=";)', strData).group(0)               # Search for the beginning of the string and the end
+                    self.dataAvailable = True
+                except AttributeError:
+                    Domoticz.Debug("No datastring found")
+            elif (Parameters["Mode2"] == "2"): 
+                try: 
+                    strData = re.search(r'(?<=myDeviceArray\[0\]=").*?(?=";)', strData).group(0)    # Search for the beginning of the string and the end
+                    self.dataAvailable = True
+                except AttributeError:
+                    Domoticz.Debug("No datastring found")
+
+            if self.dataAvailable:
+                strData = strData.split(",")                                            # Split the result string in a list so we can retrieve data
+                Domoticz.Debug("Received RAW Inverter Data: "+str(strData))             # Maybe error correction later if len(line.split()) == 11 / we expect 11 items
+        
+                current=float(strData[5])                                               # Amount in Watt
+                daily=float(strData[6])                                                 # Amount in kWh of the day
+                total=float(strData[7])                                                 # Total generated kWh needs to be converted to Wh
+        
+                Domoticz.Debug("Received Data: Current Power: "+str(current)+' W')
+                Domoticz.Debug("Received Data: Daily Power: "+str(daily/100)+' kWh')
+                Domoticz.Debug("Received Data: Total Power: "+str(total/10)+' kWh')
+                sValue=str(current)+";"+str(total*100)                                 # String: Amount in Watt ; Total generated kWh converted to Wh
+                Domoticz.Debug("Received Data: String for the sensor is: "+sValue+' !')
+
+                UpdateDevice(Unit=1, nValue=0, sValue=sValue, TimedOut=0)
+                UpdateDevice(Unit=2, nValue=0, sValue=current, TimedOut=0)
             else:
-                Domoticz.Log("Good Response received from Inverter, Dropping connection.")
-                self.httpConn = None
-            self.disconnectCount = self.disconnectCount + 1
-        elif (Status == 302):
-            Domoticz.Log("Inverter returned a Page Moved Error.")
-            sendData = { 'Verb' : 'GET',
-                         'URL'  : Data["Headers"]["Location"],
-                         'Headers' : { 'Content-Type': 'text/xml; charset=utf-8', \
-                                       'Connection': 'keep-alive', \
-                                       'Accept': 'Content-Type: text/html; charset=UTF-8', \
-                                       'Host': Parameters["Address"]+":"+Parameters["Mode1"], \
-                                       'User-Agent':'Domoticz/1.0' },
-                        }
-            Connection.Send(sendData)
+                Domoticz.Debug("No data found")
+
+#            if ((self.disconnectCount & 1) == 1):
+#                Domoticz.Log("Good Response received from Inverter, Disconnecting.")
+#                self.httpConn.Disconnect()
+#            else:
+#                Domoticz.Log("Good Response received from Inverter, Dropping connection.")
+#                self.httpConn = None
+#            self.disconnectCount = self.disconnectCount + 1
         elif (Status == 400):
             Domoticz.Error("Inverter returned a Bad Request Error.")
         elif (Status == 500):
