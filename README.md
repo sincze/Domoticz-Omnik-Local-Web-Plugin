@@ -38,8 +38,8 @@ sudo /etc/init.d/domoticz.sh restart
 Omnik inverters store the data in different values. Check ```http://inverter-ip/js/status.js``` to see where yours are.
 
 Example:
-```var webData="NLDN**2017******,NL1-V1.0-0118-4,V2.0-0028,omnik4000tl ,4000,584,345,33734,,4,";
-var myDeviceArray=new Array(); myDeviceArray[0]="AANN3020********,V5.04Build230,V4.13Build253,Omnik3000tl,3000,1313,685,9429,,1,";;
+```var webData="NLDN**2017******,NL1-V1.0-0118-4,V2.0-0028,omnik4000tl ,4000,584,345,33734,,4,";```
+```var myDeviceArray=new Array(); myDeviceArray[0]="AANN3020********,V5.04Build230,V4.13Build253,Omnik3000tl,3000,1313,685,9429,,1,";;
 ```
 In the plugin select "webData" as shown in first line or "myDeviceArray" as in second example. 
 ![parameters](https://user-images.githubusercontent.com/5776333/63643206-d2466400-c6cb-11e9-90a1-718a0c570fc3.png)
