@@ -24,7 +24,7 @@ sudo /etc/init.d/domoticz.sh restart
 ```
 ## Known issues
 
-None at the moment
+18-11-2022 Issues with latest stable of Domoticz 2022, works with previous versions.
 
 ## Updating
 
