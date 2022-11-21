@@ -27,11 +27,13 @@
 #   Author: sincze                                                                     #
 #                                                                                      #
 #   This plugin will read the status from the running inverter via the web interface.  #
+#                                                                                      #
+#   V1.0.2 21-11-20 Fix issue for Domoticz 2022.2                                      #
 ########################################################################################
 
 
 """
-<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="1.0.1" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
+<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="1.0.2" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
     <description>
         <h2>Retrieve available Information from Local Omnik Inverter Web Page</h2><br/>
     </description>
@@ -129,13 +131,11 @@ class BasePlugin:
 
     def onMessage(self, Connection, Data):
         DumpHTTPResponseToLog(Data)
-        
-        strData = Data["Data"].decode("utf-8", "ignore")
-       
         Status = int(Data["Status"])
-        LogMessage(strData)
 
         if (Status == 200):
+            strData = Data["Data"].decode("utf-8", "ignore")             
+            LogMessage(strData)
             if (Parameters["Mode2"] == "1"):
                 try: 
                     strData = re.search(r'(?<=webData=").*?(?=";)', strData).group(0)               # Search for the beginning of the string and the end
@@ -176,11 +176,11 @@ class BasePlugin:
 #                self.httpConn = None
 #            self.disconnectCount = self.disconnectCount + 1
         elif (Status == 400):
-            Domoticz.Error("Inverter returned a Bad Request Error.")
+            Domoticz.Error("Omnik Inverter returned a Bad Request Error.")
         elif (Status == 500):
-            Domoticz.Error("Inverter returned a Server Error.")
+            Domoticz.Error("Omnik Inverter returned a Server Error.")
         else:
-            Domoticz.Error("Inverter returned a status: "+str(Status))
+            Domoticz.Error("Omnik Inverter returned a status: "+str(Status))
 
     def onCommand(self, Unit, Command, Level, Hue):
         Domoticz.Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
