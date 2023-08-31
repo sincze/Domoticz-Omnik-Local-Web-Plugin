@@ -243,7 +243,6 @@ _plugin = BasePlugin()
 
 def onStart():
     global _plugin
-    createDevices():
     _plugin.onStart()
 
 def onStop():
