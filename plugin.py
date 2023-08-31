@@ -128,8 +128,7 @@ class BasePlugin:
             DumpConfigToLog()
         self.messageThread.start()
         Domoticz.Heartbeat(2)
-
-#####        
+        
         # Check if devices need to be created
         createDevices()
         
@@ -137,7 +136,6 @@ class BasePlugin:
         Domoticz.Log("Plugin is started.")
         self.httpConn = Domoticz.Connection(Name=self.sProtocol+" Test", Transport="TCP/IP", Protocol=self.sProtocol, Address=Parameters["Address"], Port=Parameters["Mode1"])
         self.httpConn.Connect()
-#####
     
     def onStop(self):
         # Not needed in an actual plugin
@@ -215,14 +213,6 @@ class BasePlugin:
                 UpdateDevice(Unit=2, nValue=0, sValue=current, TimedOut=0)
             else:
                 Domoticz.Debug("No data found")
-
-#            if ((self.disconnectCount & 1) == 1):
-#                Domoticz.Log("Good Response received from Inverter, Disconnecting.")
-#                self.httpConn.Disconnect()
-#            else:
-#                Domoticz.Log("Good Response received from Inverter, Dropping connection.")
-#                self.httpConn = None
-#            self.disconnectCount = self.disconnectCount + 1
         elif (Status == 400):
             Domoticz.Error("Omnik Inverter returned a Bad Request Error.")
         elif (Status == 500):
@@ -251,11 +241,28 @@ _plugin = BasePlugin()
 
 def onStart():
     global _plugin
+    createDevices():
     _plugin.onStart()
 
 def onStop():
     global _plugin
     _plugin.onStop()
+
+def onMessage(Connection, Data):
+    global _plugin
+    _plugin.onMessage(Connection, Data)
+
+def onCommand(Unit, Command, Level, Hue):
+    global _plugin
+    _plugin.onCommand(Unit, Command, Level, Hue)
+
+def onConnect(Connection, Status, Description):
+    global _plugin
+    _plugin.onConnect(Connection, Status, Description)
+
+def onDisconnect(Connection):
+    global _plugin
+    _plugin.onDisconnect(Connection)
 
 def onHeartbeat():
     global _plugin
@@ -298,12 +305,12 @@ def DumpHTTPResponseToLog(httpDict):
             else:
                 Domoticz.Debug("--->'" + x + "':'" + str(httpDict[x]) + "'")
 
-def UpdateDevice(Unit, nValue, sValue, TimedOut=0, AlwaysUpdate=False):
+def UpdateDevice(Unit, nValue, sValue, TimedOut):
     # Make sure that the Domoticz device still exists (they can be deleted) before updating it 
     if (Unit in Devices):
-        if (Devices[Unit].nValue != nValue) or (Devices[Unit].sValue != sValue) or (Devices[Unit].TimedOut != TimedOut):
+        if (str(Devices[Unit].nValue) != str(nValue)) or (str(Devices[Unit].sValue) != str(sValue)) or (str(Devices[Unit].TimedOut) != str(TimedOut)):
+            Domoticz.Log("["+Devices[Unit].Name+"] Update "+str(nValue)+"("+str(Devices[Unit].nValue)+"):'"+sValue+"'("+Devices[Unit].sValue+"): "+str(TimedOut)+"("+str(Devices[Unit].TimedOut)+")")
             Devices[Unit].Update(nValue=nValue, sValue=str(sValue), TimedOut=TimedOut)
-            Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' ("+Devices[Unit].Name+")")
     return
 
 
