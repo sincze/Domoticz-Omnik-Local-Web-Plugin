@@ -235,6 +235,8 @@ class BasePlugin:
             else:
                 Domoticz.Debug("onHeartbeat called, run again in "+str(self.runAgain)+" heartbeats.")
 ####
+    def onDisconnect(self, Connection):
+        Domoticz.Log("onDisconnect called for connection to: "+Connection.Address+":"+Connection.Port)
 
 global _plugin
 _plugin = BasePlugin()
