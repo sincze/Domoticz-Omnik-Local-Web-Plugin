@@ -29,11 +29,12 @@
 #   This plugin will read the status from the running inverter via the web interface.  #
 #                                                                                      #
 #   V1.0.2 21-11-20 Fix issue for Domoticz 2022.2                                      #
+#   V2.0.0 31-08-23 Multi Thread version                                               #
 ########################################################################################
 
 
 """
-<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="1.0.2" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
+<plugin key="OmnikLocalWeb" name="Omnik Inverter Local" author="sincze" version="2.0.0" externallink="https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin">
     <description>
         <h2>Retrieve available Information from Local Omnik Inverter Web Page</h2><br/>
     </description>
@@ -72,7 +73,13 @@
 try:
     import Domoticz
     import re               # Needed to extract data from Some JSON result
+    import os
+    import queue
+    import sys
+    import time
+    import threading
     local = False
+
 except ImportError:
     local = True
     import fakeDomoticz as Domoticz
@@ -92,13 +99,37 @@ class BasePlugin:
     dataAvailable = False
    
     def __init__(self):
-        return
+        self.messageQueue = queue.Queue()
+        self.messageThread = threading.Thread(name="QueueThread", target=BasePlugin.handleMessage, args=(self,))
 
+    def handleMessage(self):
+        try:
+            Domoticz.Debug("Entering message handler")
+            while True:
+                Message = self.messageQueue.get(block=True)
+                if Message is None:
+                    Domoticz.Debug("Exiting message handler")
+                    self.messageQueue.task_done()
+                    break
+
+                if (Message["Type"] == "Log"):
+                    Domoticz.Log("handleMessage: '"+Message["Text"]+"'.")
+                elif (Message["Status"] == "Error"):
+                    Domoticz.Status("handleMessage: '"+Message["Text"]+"'.")
+                elif (Message["Type"] == "Error"):
+                    Domoticz.Error("handleMessage: '"+Message["Text"]+"'.")
+                self.messageQueue.task_done()
+        except Exception as err:
+            Domoticz.Error("handleMessage: "+str(err))
+            
     def onStart(self):
         if Parameters["Mode6"] != "0":
             Domoticz.Debugging(int(Parameters["Mode6"]))
             DumpConfigToLog()
+        self.messageThread.start()
+        Domoticz.Heartbeat(2)
 
+#####        
         # Check if devices need to be created
         createDevices()
         
@@ -106,9 +137,26 @@ class BasePlugin:
         Domoticz.Log("Plugin is started.")
         self.httpConn = Domoticz.Connection(Name=self.sProtocol+" Test", Transport="TCP/IP", Protocol=self.sProtocol, Address=Parameters["Address"], Port=Parameters["Mode1"])
         self.httpConn.Connect()
-
+#####
+    
     def onStop(self):
-        Domoticz.Log("onStop - Plugin is stopping.")
+        # Not needed in an actual plugin
+        for thread in threading.enumerate():
+            if (thread.name != threading.current_thread().name):
+                Domoticz.Log("'"+thread.name+"' is running, it must be shutdown otherwise Domoticz will abort on plugin exit.")
+
+        # signal queue thread to exit
+        self.messageQueue.put(None)
+        Domoticz.Log("Clearing message queue...")
+        self.messageQueue.join()
+
+        # Wait until queue thread has exited
+        Domoticz.Log("Threads still active: "+str(threading.active_count())+", should be 1.")
+        while (threading.active_count() > 1):
+            for thread in threading.enumerate():
+                if (thread.name != threading.current_thread().name):
+                    Domoticz.Log("'"+thread.name+"' is still running, waiting otherwise Domoticz will abort on plugin exit.")
+            time.sleep(1.0)
 
     def onConnect(self, Connection, Status, Description):
         if (Status == 0):
@@ -182,13 +230,9 @@ class BasePlugin:
         else:
             Domoticz.Error("Omnik Inverter returned a status: "+str(Status))
 
-    def onCommand(self, Unit, Command, Level, Hue):
-        Domoticz.Debug("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-
-    def onDisconnect(self, Connection):
-        Domoticz.Log("onDisconnect called for connection to: "+Connection.Address+":"+Connection.Port)
-
     def onHeartbeat(self):
+        self.messageQueue.put({"Type":"Log", "Text":"Heartbeat test message"})
+###
         if (self.httpConn != None and (self.httpConn.Connecting() or self.httpConn.Connected())):
             Domoticz.Debug("onHeartbeat called, Connection is alive.")
         else:
@@ -200,6 +244,7 @@ class BasePlugin:
                 self.runAgain = 6
             else:
                 Domoticz.Debug("onHeartbeat called, run again in "+str(self.runAgain)+" heartbeats.")
+####
 
 global _plugin
 _plugin = BasePlugin()
@@ -212,31 +257,15 @@ def onStop():
     global _plugin
     _plugin.onStop()
 
-def onConnect(Connection, Status, Description):
-    global _plugin
-    _plugin.onConnect(Connection, Status, Description)
-
-def onMessage(Connection, Data):
-    global _plugin
-    _plugin.onMessage(Connection, Data)
-
-def onCommand(Unit, Command, Level, Hue):
-    global _plugin
-    _plugin.onCommand(Unit, Command, Level, Hue)
-
-def onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile):
-    global _plugin
-    _plugin.onNotification(Name, Subject, Text, Status, Priority, Sound, ImageFile)
-
-def onDisconnect(Connection):
-    global _plugin
-    _plugin.onDisconnect(Connection)
-
 def onHeartbeat():
     global _plugin
     _plugin.onHeartbeat()
-
+    
 # Generic helper functions
+def stringOrBlank(input):
+    if (input == None): return ""
+    else: return str(input)
+        
 def LogMessage(Message):
     if Parameters["Mode6"] == "File":
         f = open(Parameters["HomeFolder"]+"http.html","w")
@@ -257,7 +286,7 @@ def DumpConfigToLog():
         Domoticz.Debug("Device sValue:   '" + Devices[x].sValue + "'")
         Domoticz.Debug("Device LastLevel: " + str(Devices[x].LastLevel))
     return
-
+    
 def DumpHTTPResponseToLog(httpDict):
     if isinstance(httpDict, dict):
         Domoticz.Debug("HTTP Details ("+str(len(httpDict))+"):")
