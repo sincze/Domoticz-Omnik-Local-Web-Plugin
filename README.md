@@ -1,14 +1,12 @@
 # Domoticz-Omnik-Local-Web-Plugin
-A Domoticz Python Plugin that can read data from the local inverter webinterface.
+A (new) Domoticz Python Plugin that can read data from the local inverter webinterface.
 Some people were unable to use the magic-packet solution due to the serial number, others did not want to retrieve data from the webportal.
 
 ![devices](https://github.com/sincze/Domoticz-Omnik-Local-Web-Plugin/blob/master/plugin_preview.png)
 
-## ONLY TESTED FOR Raspberry Pi
+## ONLY TESTED FOR Raspberry Pi and Domoticz Docker
 
-With Python version 3.5 & Domoticz V4.11034 (beta)
-
-
+With Python version 3.7 & Domoticz V2023.x
 
 ## Installation
 
@@ -24,7 +22,7 @@ sudo /etc/init.d/domoticz.sh restart
 ```
 ## Known issues
 
-18-11-2022 Issues with latest stable of Domoticz 2022, works with previous versions.
+-
 
 ## Updating
 
@@ -50,8 +48,6 @@ In the plugin select "webData" as shown in first line or "myDeviceArray" as in s
 | Parameter | Value |
 | :--- | :--- |
 | **IP address** | IP of the Inverter eg. 192.168.1.100 |
-| **Inverter Username** | Username of the Inverter portal eg. admin |
-| **Inverter Password** | Password of the Inverter portal |
 | **Protocol** |	For Omnik inverters this is usually HTTP |
 | **Inverter** |	Omnik devices store data in different variables, select yours here |
 | **Debug** | default is 0 |
@@ -59,6 +55,6 @@ In the plugin select "webData" as shown in first line or "myDeviceArray" as in s
 ## Acknowledgements
 
 * Special thanks for all the hard work of [Dnpwwo](https://github.com/dnpwwo), for the examples and fixing the HTTP GET error.
-* menno99 and @smartcontrol19 for testing.
+* ChatGPT for generating the basic threading Domoticz plugin
 * Domoticz team
 
