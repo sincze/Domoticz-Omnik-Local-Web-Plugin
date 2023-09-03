@@ -130,7 +130,7 @@ class BasePlugin:
             UpdateDevice(Unit=3, nValue=1, sValue="On", TimedOut=0)      # Inverter device is on
         except:
             self.inverterResponded = False
-            UpdateDevice(Unit=3, nValue=1, sValue="Off", TimedOut=0)
+            UpdateDevice(Unit=3, nValue=0, sValue="Off", TimedOut=0) 
             Domoticz.Debug(f"No Response from inverter {url}")
 
         try:
