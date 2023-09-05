@@ -28,7 +28,7 @@
 #   This plugin will read the status from the running inverter via the web interface.  #
 #                                                                                      #
 #   V1.0.2 21-11-20 Fix issue for Domoticz 2022.2                                      #
-#   V2.0.0 03-09-23 Multi Thread version                                               #
+#   V2.0.0 04-09-23 Multi Thread version                                               #
 #                                                                                      #
 ########################################################################################
 
@@ -97,19 +97,21 @@ class BasePlugin:
     def onStart(self):
         if Parameters["Mode6"] == "-1":
             Domoticz.Debugging(1)
-            Domoticz.Log("Debugger started, use '0.0.0.0 5678' to connect")
-            import debugpy
-            self.debugging=True
-            self.debugpy=debugpy
-            debugpy.listen(("0.0.0.0", 5678))
+#            Domoticz.Log("Debugger started, use '0.0.0.0 5678' to connect")
+#            import debugpy
+#            self.debugging=True
+#            self.debugpy=debugpy
+#            debugpy.listen(("0.0.0.0", 5678))
 ##            debugpy.wait_for_client()
-            time.sleep(10)
-            debugpy.breakpoint()
+#            time.sleep(10)
+#            debugpy.breakpoint()
         else:
             Domoticz.Log("onStart called")
         if Parameters["Mode6"] != "0":
             Domoticz.Debugging(int(Parameters["Mode6"]))
             DumpConfigToLog()
+
+        Domoticz.Log("Plugin started")
 
         createDevices()
 
@@ -124,14 +126,16 @@ class BasePlugin:
         Domoticz.Log("Plugin stopped")
 
     def fetch_url(self, url):
+
         try:
             response = requests.get(url)
             self.inverterResponded = True
             UpdateDevice(Unit=3, nValue=1, sValue="On", TimedOut=0)      # Inverter device is on
         except:
             self.inverterResponded = False
-            UpdateDevice(Unit=3, nValue=0, sValue="Off", TimedOut=0) 
+            UpdateDevice(Unit=3, nValue=0, sValue="Off", TimedOut=0)
             Domoticz.Debug(f"No Response from inverter {url}")
+            return
 
         try:
             if ( response.ok ) and ( self.inverterResponded ):
@@ -151,9 +155,11 @@ class BasePlugin:
                     except AttributeError:
                         Domoticz.Debug("No datastring found")
             else:
-                Domoticz.Log(f"Switching Received HTTP {response.status_code}")
+               message = f"Switching Received HTTP {response.status_code}" 
+               Domoticz.Debug(message)
         except:
-            Domoticz.Log(f"Server did not respond!")
+            Domoticz.Debug("Server did not respond!")
+            return
 
         if self.dataAvailable:
             strData = strData.split(",")                                         # Split the result string in a list so we can retrieve data
@@ -165,15 +171,17 @@ class BasePlugin:
 
             Domoticz.Debug(f"Received Data: Current Power: {current} W, Daily Power: {daily/100} kWh, Total Power: {total/10} kWh")
 
-            sValue=f"{current};{(total*100)}" 
-            Domoticz.Debug(f"Received Data: String for the sensor is: {sValue} !")
+            sValue=f"{current};{(total*100)}"
+            message = f"Received Data: String for the sensor is: {sValue} !" 
+            Domoticz.Debug(message)
+
             UpdateDevice(Unit=1, nValue=0, sValue=sValue, TimedOut=0)
             UpdateDevice(Unit=2, nValue=0, sValue=current, TimedOut=0)
             UpdateDevice(Unit=4, nValue=0, sValue=f"{total*100}", TimedOut=0)
 
-            if current == 0:
-                UpdateDevice(Unit=3, nValue=1, sValue="Off", TimedOut=0)      # Inverter device is on
-                Domoticz.Log(f"Switching Off")
+#            if current == 0:
+#                UpdateDevice(Unit=3, nValue=1, sValue="Off", TimedOut=0)      # Inverter device is on
+#                Domoticz.Log(f"Switching Off")
         else:
             Domoticz.Debug("No Inverter data found")
 
@@ -184,13 +192,16 @@ class BasePlugin:
         #    self.stop()
         self.runAgain = self.runAgain - 1
         if self.runAgain <= 0:
-            Domoticz.Debug(f"onHeartbeat Fetching URL {self.url}")
+            message = f"onHeartbeat Fetching URL {self.url}"
+            Domoticz.Debug(message)
             thread = threading.Thread(target=self.fetch_url, args=(self.url,))
             self.threads.append(thread)
             thread.start()
             self.runAgain = 6
         else:
-            Domoticz.Debug(f"onHeartbeat called, run again in {self.runAgain} heartbeats.")
+            message = f"onHeartbeat called, run again in {self.runAgain} heartbeats."
+            Domoticz.Debug(message)
+
 
     def stop(self):
         # Cleanup and stop the plugin
@@ -253,7 +264,6 @@ def UpdateDevice(Unit, nValue, sValue, TimedOut=0, AlwaysUpdate=False):
             Devices[Unit].Update(nValue=nValue, sValue=str(sValue), TimedOut=TimedOut)
             Devices[Unit].Update(nValue=nValue, sValue=f"{sValue}", TimedOut=TimedOut)
             Domoticz.Log(f"Update {nValue};{sValue} {Devices[Unit].Name}")
-
     return
 
 
@@ -262,6 +272,7 @@ def UpdateDevice(Unit, nValue, sValue, TimedOut=0, AlwaysUpdate=False):
 #############################################################################
 
 def createDevices():
+
     # Images
     # Check if images are in database
     if "Omnik" not in Images:
